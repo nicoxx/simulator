@@ -5,21 +5,29 @@ Created on Mon Feb 24 15:10:30 2014
 @author: Vincent Grosbois
 """
 
-import random 
+import random
+import matplotlib.pyplot as plt
+
 
 N  = 3
 
-vol_V = 1
-vols = list()
+sigma_V = 1
+mu_V = 2
+
+sigma_D = list()
+mu_D = list()
+
 rho = list()
 
 
 for i in range(N):
-    vols.append(1)
-    rho.append(1./(i+2))
+    sigma_D.append(1)
+    mu_D.append(0)
+    rho.append(1./((i+2)*(i+2)))
     
 
-print vols
+print sigma_D
+print "rho :"
 print rho
 
 r = list()
@@ -27,17 +35,15 @@ r = list()
 for i in range(N):
     r.append(1./N)
     
-
-print(r)
  
         
 for n in range(50000):
     
-    V = random.lognormvariate(0, vol_V)
+    V = random.lognormvariate(mu_V, sigma_V)
     
     D = list()
     for i in range(N):
-        D.append(random.lognormvariate(0, vols[i])) 
+        D.append(random.lognormvariate(0, sigma_D[i])) 
     
     
     indic = list()
@@ -67,12 +73,17 @@ print sum(r)
 C1_tot = 0
 C2_tot = 0
 test_n = 10000
+
+C1_list = list()
+C2_list = list()
+perf_list = list()
+
 for n in range(test_n):
-    V = random.lognormvariate(0, vol_V)
+    V = random.lognormvariate(mu_V, sigma_V)
     
     D = list()
     for i in range(N):
-        D.append(random.lognormvariate(0, vols[i]))
+        D.append(random.lognormvariate(mu_D[i], sigma_D[i]))
         
     C1 = 0
     C2 = 0
@@ -101,15 +112,16 @@ for n in range(test_n):
             V_temp -= item[1]
         
     
-    C1 /= N
-    C2 /= N
     
-    C1_tot += C1
-    C2_tot += C2
+    C1_tot += C1 / V
+    C2_tot += C2 / V
+    C1_list.append(C1_tot / (n+1))
+    C2_list.append(C2_tot / (n+1))
+    perf_list.append( C1_tot / C2_tot )
     
 
-C1_tot /= test_n
-C2_tot /= test_n
+C1_tot /= test_n + 1
+C2_tot /= test_n + 1
 
 
 print( "C1" )
@@ -121,5 +133,8 @@ print (C2_tot)
 print("perf index") 
 print(C1_tot / C2_tot)
     
-
+plt.plot(perf_list)
+#ou :
+#plt.plot(C1_tot)
+#plt.plot(C2_tot)
 
