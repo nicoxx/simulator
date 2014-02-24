@@ -11,22 +11,53 @@ import matplotlib.pyplot as plt
 
 N  = 3
 
-sigma_V = 1
-mu_V = 2
+E_D = list()
+Var_D = list()
+
+rho = list()
+for i in range(N):
+    E_D.append(i + 1)
+    Var_D.append(1)
+    rho.append(1./((i+2)*(i+2)))
+
+
+
+rho[0] = 0.01
+rho[1] = 0.03
+rho[2] = 0.05
+
+
+print('E_D')
+print(E_D)
+print('Var_D')
+print(Var_D)
+
+Var_V = 1
+E_V = sum(E_D)*3/2
+
+
+print('E_V')
+print(E_V)
+print('Var_V')
+print(Var_V)
+
+sigma_V =  sqrt( log( 1  + Var_V / E_V*E_V ) ) 
+mu_V = log (E_V) -  0.5*  log( 1  + Var_V / E_V*E_V )
+
+
 
 sigma_D = list()
 mu_D = list()
 
-rho = list()
-
 
 for i in range(N):
-    sigma_D.append(1)
-    mu_D.append(0)
-    rho.append(1./((i+2)*(i+2)))
+    sigma_D.append( sqrt( log( 1  + Var_D[i] / E_D[i]*E_D[i] ) )  )
+    mu_D.append( log (E_D[i]) -  0.5*  log( 1  + Var_D[i] / E_D[i]*E_D[i] ) )    
     
+   
 
-print sigma_D
+
+
 print "rho :"
 print rho
 
@@ -35,9 +66,8 @@ r = list()
 for i in range(N):
     r.append(1./N)
     
- 
         
-for n in range(50000):
+for n in range(100000):
     
     V = random.lognormvariate(mu_V, sigma_V)
     
@@ -72,7 +102,7 @@ print sum(r)
 
 C1_tot = 0
 C2_tot = 0
-test_n = 10000
+test_n = 20000
 
 C1_list = list()
 C2_list = list()
@@ -108,7 +138,7 @@ for n in range(test_n):
             C2 += V_temp*item[0]
             V_temp = 0
         else:
-            C2 += item[0]*item[1]
+            C2 += item[1]*item[0]
             V_temp -= item[1]
         
     
@@ -133,8 +163,8 @@ print (C2_tot)
 print("perf index") 
 print(C1_tot / C2_tot)
     
-plt.plot(perf_list)
-#ou :
-#plt.plot(C1_tot)
-#plt.plot(C2_tot)
 
+plt.plot(C1_list)
+plt.plot(C2_list)
+plt.figure()
+plt.plot(perf_list)
