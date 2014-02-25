@@ -10,39 +10,36 @@ from math import *
 import matplotlib.pyplot as plt
 
 
-N  = 3
+#moving average function for results displaying
+def MovingAverage(values, window):
+        
+    result = list()
+    currentValue = float(sum(values[0:window-1]))    
+    result.append(currentValue/window)
+    for i in range(window,len(values)):
+        currentValue += values[i]-values[i-window]
+        result.append(currentValue/window)
+    return result
 
+
+#nb of dark pools
+N  = 3
+#discount of each dark pool
+rho = [0.01,0.03,0.05]
+#expected value and variance of Di: liquidity in each dark pool
 E_D = list()
 Var_D = list()
-
-rho = list()
 for i in range(N):
-    E_D.append(1.*(i + 1))
+    E_D.append(i + 1.)
     Var_D.append(1.)
-    rho.append(1./((i+2)*(i+2)))
-
-
-rho[0] = 0.01
-rho[1] = 0.03
-rho[2] = 0.05
-
-
-print('Esperance D:')
-print(E_D)
-print('Variance D:')
-print(Var_D)
-
+    
+#expected value and variance of V:volume to execute
 Var_V = 1.
-E_V = sum(E_D)*3/2
+E_V = sum(E_D)*3/2 #shortage of liquidity
 
-print('Esperance V:')
-print(E_V)
-print('Variance V:')
-print(Var_V)
-
+#compute parameters of lognormal laws from expected value and variance
 sigma_V =  sqrt( log( 1  + Var_V / (E_V*E_V) ) ) 
 mu_V = log (E_V) -  0.5*  log( 1  + Var_V / (E_V*E_V) )
-
 
 sigma_D = list()
 mu_D = list()
@@ -50,120 +47,111 @@ for i in range(N):
     sigma_D.append( sqrt(log ( 1.  + Var_D[i] / (E_D[i]*E_D[i]) ) )  )
     mu_D.append( log (E_D[i]) -  0.5*  log( 1  + Var_D[i] / (E_D[i]*E_D[i]) ) )    
     
-   
-#print(sigma_D) #pour le debug...
-
-
-print "Rho :"
-print rho
-
+#optimal allocation decided by algo
 r = list()
-
+#initialization with same value for each dark pool
 for i in range(N):
     r.append(1./N)
+
+#nb of simulations
+nb_simu = 100000;
     
+#reporting data
+Rel_CR_Oracle_list = list()
+Rel_CR_Algo_list = list()
+perf_Algo_list = list()
+perf_Oracle_list = list()
         
-for n in range(100000):
+for n in range(nb_simu):
     
+    #quantity to execute
     V = random.lognormvariate(mu_V, sigma_V)
-    
+    #quantity available in each darl pool
     D = list()
     for i in range(N):
         D.append(random.lognormvariate(mu_D[i], sigma_D[i])) 
     
+    #Compute cost reduction with optimisation algorithm
+    CR_Algo = 0.
+    for i in range(N):
+        CR_Algo += rho[i]*min(r[i]*V,D[i])
+
+    #Compute cost reduction with oracle
+        #-Make a list of dar pool datas : rho and Di
+        #-Sort by rho, big (more discount) to small
+        #-take all the liquidity in sorted pools up to execute V
+    CR_Oracle = 0.
+    dark_pools = list()
+    for i in range(N):
+        dark_pools.append( (rho[i], D[i]))
+                
+    dark_pools.sort(key=lambda x: -x[0])
+    V_temp = V
+    for item in dark_pools:
+        if( item[1] > V_temp ):
+            CR_Oracle += V_temp*item[0]
+            break
+        else:
+            CR_Oracle += item[1]*item[0]
+            V_temp -= item[1]
+
+
+    #optimisation algorithm to determine optimal allocation for next iteration
+        #-compute indicator fonction {riV<Di} of each dark pool
+        #-compute 1/N * sum ( rho_j * indic_j) (S)
+        #-apply fixed point formula
+        #-bound ri in [0,1]
     indic = list()
     for i in range(N):
         if r[i]*V < D[i]:
             indic.append(1.)
         else:
             indic.append(0.)
-      
+     
     S = 0.
     for i in range(N):
         S = S + rho[i]*indic[i]  
     S = S/N
     
-    
     for i in range(N):
         r[i] = r[i] + (1./(n+1))*V*(rho[i]*indic[i] - S)
 
-    #print r
-    
-print "estimation r :"
-print r
-
-#partie test 
-
-C1_tot = 0
-C2_tot = 0
-test_n = 10000
-
-C1_list = list()
-C2_list = list()
-perf_list = list()
-ratio_list = list()
-ratio = 0
-for n in range(test_n):
-    V = random.lognormvariate(mu_V, sigma_V)
-    
-    D = list()
+    #bound ri in [0,1]
     for i in range(N):
-        D.append(random.lognormvariate(mu_D[i], sigma_D[i]))
-        
-    C1 = 0.
-    C2 = 0.
-    
-    dark_pools = list()  
-    
+        r[i] = min(1,max(0,r[i]))
+    normalizationFactor = sum(r)
     for i in range(N):
-        dark_pools.append( (rho[i], D[i]))
-        if( D[i] > r[i]*V):
-            C1 += rho[i]*r[i]*V
-        else:
-            C1 += rho[i]*D[i]
-            
-    dark_pools.sort(key=lambda x: -x[0])
-    
-    V_temp = V
-    for item in dark_pools:
-        if V_temp <= 0:
-            break
+        r[i] = r[i]/normalizationFactor
         
-        if( item[1] > V_temp ):
-            C2 += V_temp*item[0]
-            V_temp = 0
-        else:
-            C2 += item[1]*item[0]
-            V_temp -= item[1]
-        
-    
-    
-    C1_tot += C1 / V
-    C2_tot += C2 / V
-    C1_list.append(C1_tot / (n+1))
-    C2_list.append(C2_tot / (n+1))
-    
-    ratio += C1 / C2
-    ratio_list.append(ratio / (n+1))
-    perf_list.append( C1_tot / C2_tot )
-    
 
-C1_tot /= test_n + 1
-C2_tot /= test_n + 1
+    #reporting data management
 
-
-print( "C1" )
-print (C1_tot)
-        
-print( "C2" )
-print (C2_tot)  
-
-print("perf index") 
-print(C1_tot / C2_tot)
+    #relative cost reduction to volume
+    Rel_CR_Oracle = CR_Oracle/V
+    Rel_CR_Algo = CR_Algo/V
+    #performance relative to index    
     
-
-plt.plot(C1_list)
-plt.plot(C2_list)
+    Rel_CR_Algo_list.append(Rel_CR_Algo)
+    Rel_CR_Oracle_list.append(Rel_CR_Oracle)
+    perf_Algo_list.append(Rel_CR_Algo/Rel_CR_Oracle)
+    perf_Oracle_list.append(Rel_CR_Oracle/Rel_CR_Oracle)
+    
+#displaying results
+window = 2000
+Rel_CR_Algo_list_mv = MovingAverage(Rel_CR_Algo_list,window)
+Rel_CR_Oracle_list_mv = MovingAverage(Rel_CR_Oracle_list,window)
+plt.plot(Rel_CR_Algo_list_mv)
+plt.plot(Rel_CR_Oracle_list_mv)
 plt.figure()
-plt.plot(ratio_list)
-plt.plot(perf_list)
+
+perf_Algo_list_mv = MovingAverage(perf_Algo_list,window)
+perf_Oracle_list_mv = MovingAverage(perf_Oracle_list,window)
+plt.plot(perf_Algo_list_mv)
+plt.plot(perf_Oracle_list_mv)
+plt.figure()
+
+
+
+
+
+
