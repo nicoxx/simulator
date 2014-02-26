@@ -2,7 +2,7 @@
 """
 Created on Mon Feb 24 15:10:30 2014
 
-@author: Vincent Grosbois
+@authors: Vincent Grosbois, Nicolas Lecrique
 """
 
 import random
@@ -33,6 +33,7 @@ for i in range(N):
     E_D.append(i + 1.)
     Var_D.append(1.)
     
+    
 #expected value and variance of V:volume to execute
 Var_V = 1.
 E_V = sum(E_D)*3/2 #shortage of liquidity
@@ -54,7 +55,7 @@ for i in range(N):
     r.append(1./N)
 
 #nb of simulations
-nb_simu = 100000;
+nb_simu = 10000;
     
 #reporting data
 Rel_CR_Oracle_list = list()
@@ -137,7 +138,7 @@ for n in range(nb_simu):
     perf_Oracle_list.append(Rel_CR_Oracle/Rel_CR_Oracle)
     
 #displaying results
-window = 2000
+window = 100
 Rel_CR_Algo_list_mv = MovingAverage(Rel_CR_Algo_list,window)
 Rel_CR_Oracle_list_mv = MovingAverage(Rel_CR_Oracle_list,window)
 plt.plot(Rel_CR_Algo_list_mv)
@@ -148,8 +149,6 @@ perf_Algo_list_mv = MovingAverage(perf_Algo_list,window)
 perf_Oracle_list_mv = MovingAverage(perf_Oracle_list,window)
 plt.plot(perf_Algo_list_mv)
 plt.plot(perf_Oracle_list_mv)
-plt.figure()
-
 
 
 
